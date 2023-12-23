@@ -9,8 +9,8 @@ namespace SearchService.Entities
         public string Winner { get; set; }
         public int SoldAmount { get; set; }
         public int CurrentHighBid { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime UpdatedDate { get; set; }
         public DateTime AuctionEnd { get; set; }
         public string Status { get; set; }
         public string Make { get; set; }
@@ -18,6 +18,6 @@ namespace SearchService.Entities
         public int Year { get; set; }
         public string Color { get; set; }
         public int Mileage { get; set; }
-        public string ImageUrl { get; set; }
+        public string Image { get; set; }
     }
 }

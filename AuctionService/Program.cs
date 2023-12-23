@@ -2,6 +2,7 @@ using AuctionService.Data;
 using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,9 +18,6 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-
-//app.UseAuthorization();
 try
 {
     DbInitializer.InitDb(app);
@@ -27,11 +25,19 @@ try
 catch { }
 
 //get all auctions
-app.MapGet("/api/auctions", async (AuctionDbContext repo, IMapper mapper) =>
+app.MapGet("/api/auctions", async (string? date,AuctionDbContext repo, IMapper mapper) =>
 {
-    var auctions = await repo.Auctions.Include(x => x.Item).OrderBy(x => x.Item.Make).ToListAsync();
+    //var auctions = await repo.Auctions.Include(x => x.Item).OrderBy(x => x.Item.Make).ToListAsync();
+    var auctions = repo.Auctions.OrderBy(x => x.Item.Make).AsQueryable();
+    if(!string.IsNullOrEmpty(date))
+    {
+        auctions = auctions.Where(x => x.UpdatedDate.CompareTo(DateTime.Parse(date).ToUniversalTime()) > 0);
+
+    }
     var auctionDtos = mapper.Map<List<AuctionDTO>>(auctions);
-    return Results.Ok(auctionDtos);
+    return Results.Ok(
+        await auctions.ProjectTo<AuctionDTO>(mapper.ConfigurationProvider).ToListAsync()
+        ) ;
 });
 
 

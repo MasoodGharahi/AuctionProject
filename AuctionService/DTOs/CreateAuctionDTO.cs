@@ -23,7 +23,7 @@ namespace AuctionService.DTOs
         public string Image { get; set; }
 
         [Required]
-        public int ReservePrice { get; set; }
+        public Int64 ReservePrice { get; set; }
 
         [Required]
         public DateTime AuctionEnd { get; set; }
