@@ -24,7 +24,7 @@ app.Lifetime.ApplicationStarted.Register(async () =>
     }
     catch (Exception ex)
     {
-        throw new Exception($"Error while initializing MongoDb : {ex.Message}");
+        throw new Exception($"Error while initializing MongoDb: {ex.Message}");
     }
 });
 
@@ -70,7 +70,7 @@ app.MapGet("api/search", async ([FromBody] SearchParams? searchParams) =>
     });
 app.Run();
 
-//declaring http requests policies
+//declaring http requests policies 
 static IAsyncPolicy<HttpResponseMessage> GetPolicy()
     => HttpPolicyExtensions
     .HandleTransientHttpError().OrResult(msg=>msg.StatusCode== HttpStatusCode.NotFound)
