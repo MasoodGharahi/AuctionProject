@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Entities;
 using Polly;
@@ -13,7 +14,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpClient<IAuctionServiceHttpClient,AuctionServiceHttpClient>().AddPolicyHandler(GetPolicy());
-
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 app.Lifetime.ApplicationStarted.Register(async () =>
