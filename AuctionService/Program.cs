@@ -3,6 +3,8 @@ using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +16,19 @@ builder.Services.AddDbContext<AuctionDbContext>(Opt =>
 { Opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); });
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-// Add services to the container.
+builder.Services.AddMassTransit(x =>
+{
+    x.AddEntityFrameworkOutbox<AuctionDbContext>(x =>
+    {
+        x.QueryDelay = TimeSpan.FromSeconds(10);
+        x.UsePostgres();
+        x.UseBusOutbox();
+    });
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 
@@ -25,11 +39,11 @@ try
 catch { }
 
 //get all auctions
-app.MapGet("/api/auctions", async (string? date,AuctionDbContext repo, IMapper mapper) =>
+app.MapGet("/api/auctions", async (string? date, AuctionDbContext repo, IMapper mapper) =>
 {
     //var auctions = await repo.Auctions.Include(x => x.Item).OrderBy(x => x.Item.Make).ToListAsync();
     var auctions = repo.Auctions.OrderBy(x => x.Item.Make).AsQueryable();
-    if(!string.IsNullOrEmpty(date))
+    if (!string.IsNullOrEmpty(date))
     {
         auctions = auctions.Where(x => x.UpdatedDate.CompareTo(DateTime.Parse(date).ToUniversalTime()) > 0);
 
@@ -37,9 +51,8 @@ app.MapGet("/api/auctions", async (string? date,AuctionDbContext repo, IMapper m
     var auctionDtos = mapper.Map<List<AuctionDTO>>(auctions);
     return Results.Ok(
         await auctions.ProjectTo<AuctionDTO>(mapper.ConfigurationProvider).ToListAsync()
-        ) ;
+        );
 });
-
 
 //get by id
 app.MapGet("/api/auctions/{id}", async (Guid id, IMapper mapper, AuctionDbContext repo) =>
@@ -51,16 +64,23 @@ app.MapGet("/api/auctions/{id}", async (Guid id, IMapper mapper, AuctionDbContex
 
     return Results.Ok(auctionDto);
 }).WithName("GetAuctionById");
+
 //create auction
-app.MapPost("/api/auctions", async (CreateAuctionDTO createAuctionDTO, IMapper mapper, AuctionDbContext repo) =>
+app.MapPost("/api/auctions", async (CreateAuctionDTO createAuctionDTO, IMapper mapper, AuctionDbContext repo,
+    IPublishEndpoint publishEndpoint) =>
 {
     var auction = mapper.Map<Auction>(createAuctionDTO);
     auction.Seller = "Temp seller";
     await repo.Auctions.AddAsync(auction);
+
+    var createdAuctionDto = mapper.Map<AuctionDTO>(auction);
+    await publishEndpoint.Publish(mapper.Map<AuctionCreated>(createdAuctionDto));
+
     bool result = await repo.SaveChangesAsync() > 0;
     if (!result)
         return Results.BadRequest("Could not create the record.");
-    return Results.CreatedAtRoute(routeName: "GetAuctionById", routeValues: new { id = auction.Id }, value: mapper.Map<AuctionDTO>(auction));
+
+    return Results.CreatedAtRoute(routeName: "GetAuctionById", routeValues: new { id = auction.Id }, value: createdAuctionDto);
 });
 
 //update
@@ -77,6 +97,8 @@ app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction,
     if (!result) return Results.BadRequest();
     return Results.Ok();
 });
+
+//delete
 app.MapDelete("/api/auctions/{id}", async (Guid id, AuctionDbContext repo) =>
 {
     var auction = await repo.Auctions.FindAsync(id);
