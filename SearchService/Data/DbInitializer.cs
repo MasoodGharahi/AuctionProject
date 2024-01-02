@@ -22,6 +22,7 @@ namespace SearchService.Data
             var httpClient = scope.ServiceProvider.GetRequiredService<IAuctionServiceHttpClient>();
             var items = await httpClient.GetItemsForSearchDb();
             if(items!= null && items.Count>0) await DB.SaveAsync<Item>(items);
+            //
         }
     }
 }
