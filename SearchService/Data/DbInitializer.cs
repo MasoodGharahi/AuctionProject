@@ -18,11 +18,14 @@ namespace SearchService.Data
                 .Key(x => x.Color, KeyType.Text)
                 .CreateAsync();
             var count = await DB.CountAsync<Item>();
-            using var scope = app.Services.CreateScope();
-            var httpClient = scope.ServiceProvider.GetRequiredService<IAuctionServiceHttpClient>();
-            var items = await httpClient.GetItemsForSearchDb();
-            if(items!= null && items.Count>0) await DB.SaveAsync<Item>(items);
-            //
+            if (count < 1)
+            {
+                using var scope = app.Services.CreateScope();
+                var httpClient = scope.ServiceProvider.GetRequiredService<IAuctionServiceHttpClient>();
+                var items = await httpClient.GetItemsForSearchDb();
+                if (items != null && items.Count > 0) await DB.SaveAsync<Item>(items);
+            }
+            
         }
     }
 }

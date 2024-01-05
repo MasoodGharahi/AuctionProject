@@ -1,3 +1,4 @@
+using AuctionService.Consumers;
 using AuctionService.Data;
 using AuctionService.DTOs;
 using AuctionService.Entities;
@@ -5,6 +6,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
+using MassTransit.Transports;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +26,8 @@ builder.Services.AddMassTransit(x =>
         x.UsePostgres();
         x.UseBusOutbox();
     });
+    x.AddConsumersFromNamespaceContaining<AuctionCreatedFaultConsumer>();
+    x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("auction", false));
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.ConfigureEndpoints(context);
@@ -84,7 +88,8 @@ app.MapPost("/api/auctions", async (CreateAuctionDTO createAuctionDTO, IMapper m
 });
 
 //update
-app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction, IMapper mapper, AuctionDbContext repo) =>
+app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction, IMapper mapper,
+    AuctionDbContext repo, IPublishEndpoint publishEndpoint) =>
 {
     var auction = await repo.Auctions.Include(x => x.Item).FirstOrDefaultAsync(x => x.Id == id);
     if (auction == null) return Results.NotFound();
@@ -93,18 +98,25 @@ app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction,
     auction.Item.Color = updateAuction.Color ?? auction.Item.Color;
     auction.Item.Mileage = updateAuction.Mileage ?? auction.Item.Mileage;
     auction.Item.Year = updateAuction.Year ?? auction.Item.Year;
+    
+    await publishEndpoint.Publish(mapper.Map<AuctionUpdated>(auction));
+
     var result = await repo.SaveChangesAsync() > 0;
     if (!result) return Results.BadRequest();
+    //var updatedAuction = mapper.Map<AuctionUpdated>(updateAuction);
+    
     return Results.Ok();
 });
 
 //delete
-app.MapDelete("/api/auctions/{id}", async (Guid id, AuctionDbContext repo) =>
+app.MapDelete("/api/auctions/{id}", async (Guid id, AuctionDbContext repo,
+    IPublishEndpoint publishEndpoint) =>
 {
     var auction = await repo.Auctions.FindAsync(id);
     if (auction != null)
     {
         repo.Auctions.Remove(auction);
+       await publishEndpoint.Publish(new AuctionDeleted { Id=auction.Id.ToString() });
         var result = await repo.SaveChangesAsync() > 0;
 
         return Results.Ok();

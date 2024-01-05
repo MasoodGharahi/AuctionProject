@@ -18,7 +18,10 @@ namespace SearchService.Consumers
         {
             Console.WriteLine("---> Consuming AuctionCreated: " + context.Message.Id);
             var item=_mapper.Map<Item>(context.Message);
+
+            //if (item.Model == "Test") throw new ArgumentException("Can't create test stuff.");
             await item.SaveAsync();
         }
     }
 }
+ 
