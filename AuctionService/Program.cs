@@ -7,6 +7,9 @@ using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
 using MassTransit.Transports;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +36,15 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(context);
     });
 });
-
+//Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = builder.Configuration["IdentityServiceUrl"];
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters.ValidateAudience = false;
+        options.TokenValidationParameters.NameClaimType = "username";
+    });
 var app = builder.Build();
 
 try
@@ -70,11 +81,12 @@ app.MapGet("/api/auctions/{id}", async (Guid id, IMapper mapper, AuctionDbContex
 }).WithName("GetAuctionById");
 
 //create auction
-app.MapPost("/api/auctions", async (CreateAuctionDTO createAuctionDTO, IMapper mapper, AuctionDbContext repo,
-    IPublishEndpoint publishEndpoint) =>
+
+app.MapPost("/api/auctions", [Authorize] async (CreateAuctionDTO createAuctionDTO, IMapper mapper, AuctionDbContext repo,
+    IPublishEndpoint publishEndpoint, HttpContext context) =>
 {
     var auction = mapper.Map<Auction>(createAuctionDTO);
-    auction.Seller = "Temp seller";
+    auction.Seller =context.User.Identity.Name;
     await repo.Auctions.AddAsync(auction);
 
     var createdAuctionDto = mapper.Map<AuctionDTO>(auction);
@@ -88,11 +100,13 @@ app.MapPost("/api/auctions", async (CreateAuctionDTO createAuctionDTO, IMapper m
 });
 
 //update
-app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction, IMapper mapper,
-    AuctionDbContext repo, IPublishEndpoint publishEndpoint) =>
+app.MapPut("/api/auctions/{id}",[Authorize] async (Guid id, UpdateAuctionDTO updateAuction, IMapper mapper,
+    AuctionDbContext repo, IPublishEndpoint publishEndpoint,HttpContext context) =>
 {
     var auction = await repo.Auctions.Include(x => x.Item).FirstOrDefaultAsync(x => x.Id == id);
     if (auction == null) return Results.NotFound();
+
+    if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
     auction.Item.Make = updateAuction.Make ?? auction.Item.Make;
     auction.Item.Model = updateAuction.Model ?? auction.Item.Model;
     auction.Item.Color = updateAuction.Color ?? auction.Item.Color;
@@ -109,12 +123,13 @@ app.MapPut("/api/auctions/{id}", async (Guid id, UpdateAuctionDTO updateAuction,
 });
 
 //delete
-app.MapDelete("/api/auctions/{id}", async (Guid id, AuctionDbContext repo,
-    IPublishEndpoint publishEndpoint) =>
+app.MapDelete("/api/auctions/{id}", [Authorize] async (Guid id, AuctionDbContext repo,
+    IPublishEndpoint publishEndpoint, HttpContext context) =>
 {
     var auction = await repo.Auctions.FindAsync(id);
     if (auction != null)
     {
+        if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
         repo.Auctions.Remove(auction);
        await publishEndpoint.Publish(new AuctionDeleted { Id=auction.Id.ToString() });
         var result = await repo.SaveChangesAsync() > 0;
