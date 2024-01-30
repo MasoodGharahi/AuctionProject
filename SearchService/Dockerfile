@@ -15,11 +15,13 @@ COPY IdentityService/IdentityService.csproj IdentityService/IdentityService.cspr
 RUN dotnet restore AuctionProject.sln
 
 # Copy the app folders over
-WORKDIR /app/IdentityService
+COPY SearchService SearchService
+COPY Contracts Contracts
+WORKDIR /app/SearchService
 RUN dotnet publish -c Release -o /app/src/out
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/src/out .
-ENTRYPOINT [ "dotnet", "IdentityService.dll" ]
+ENTRYPOINT [ "dotnet", "SearchService.dll" ]
