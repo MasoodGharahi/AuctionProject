@@ -18,10 +18,10 @@ RUN dotnet restore AuctionProject.sln
 COPY SearchService SearchService
 COPY Contracts Contracts
 WORKDIR /app/SearchService
-RUN dotnet publish -c Release -o /app/src/out
+RUN dotnet publish -c Release -o /app/out
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=build /app/src/out .
+COPY --from=build /app/out .
 ENTRYPOINT [ "dotnet", "SearchService.dll" ]

@@ -15,11 +15,13 @@ COPY IdentityService/IdentityService.csproj IdentityService/IdentityService.cspr
 RUN dotnet restore AuctionProject.sln
 
 # Copy the app folders over
+COPY IdentityService IdentityService
 WORKDIR /app/IdentityService
-RUN dotnet publish -c Release -o /app/src/out
+RUN dotnet publish -c Release -o /app/out
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=build /app/src/out .
+COPY --from=build /app/out .
 ENTRYPOINT [ "dotnet", "IdentityService.dll" ]
+# cmd=> docker compose build identity-svc
