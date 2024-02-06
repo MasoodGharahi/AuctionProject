@@ -1,24 +1,27 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
+	FROM mcr.microsoft.com/dotnet/sdk:8.0 as build
 WORKDIR /app
-EXPOSE 8080
+EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /
-COPY ["GatewayService/GatewayService.csproj", "GatewayService/"]
-RUN dotnet restore "./GatewayService/./GatewayService.csproj"
-COPY . .
-WORKDIR "/GatewayService"
-RUN dotnet build "./GatewayService.csproj" -c $BUILD_CONFIGURATION -o /app/build
+# copy all .csproj files and restore as distinct layers.   Use of the same COPY command
+# for every dockerfile in the project to take advantage of docker caching
+COPY AuctionProject.sln AuctionProject.sln
+COPY AuctionService/AuctionService.csproj AuctionService/AuctionService.csproj
+COPY SearchService/SearchService.csproj SearchService/SearchService.csproj
+COPY GatewayService/GatewayService.csproj GatewayService/GatewayService.csproj
+COPY Contracts/Contracts.csproj Contracts/Contracts.csproj
+COPY IdentityService/IdentityService.csproj IdentityService/IdentityService.csproj
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./GatewayService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Restore package deps
+RUN dotnet restore AuctionProject.sln
 
-FROM base AS final
+# Copy the app folders over
+COPY GatewayService GatewayService
+COPY Contracts Contracts
+WORKDIR /app/GatewayService
+RUN dotnet publish -c Release -o /app/out
+
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "GatewayService.dll"]
+COPY --from=build /app/out .
+ENTRYPOINT [ "dotnet", "GatewayService.dll" ]
