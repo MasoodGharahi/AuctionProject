@@ -19,9 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IdentityService", "Identity
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GatewayService", "GatewayService\GatewayService.csproj", "{2E51F33A-5600-4FE7-B9FF-0B0EA7F0AE1A}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuctionProjectUnitTests", "Tests\AuctionProjectUnitTests\AuctionProjectUnitTests.csproj", "{0FEB0ACE-B75E-422D-8717-FAA707D5DAC0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuctionProjectUnitTests", "Tests\AuctionProjectUnitTests\AuctionProjectUnitTests.csproj", "{0FEB0ACE-B75E-422D-8717-FAA707D5DAC0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,13 +54,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{2B1981E6-C70F-4916-A59E-767989AEB24C} = {F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}
-		{4B199EE3-DE70-4744-B333-28B7468CECA1} = {F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}
-		{4ECBC245-3913-4C67-9F66-CAFCDFB7372D} = {F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}
-		{A8FFA6FF-0881-4D5E-A14B-068E06791AAF} = {F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}
-		{2E51F33A-5600-4FE7-B9FF-0B0EA7F0AE1A} = {F4C41F92-CFBF-4D70-82BC-BDAA912EBAFF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8A51C0BF-1C5E-4402-ADDF-15262C2547AB}

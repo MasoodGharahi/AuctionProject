@@ -2,6 +2,8 @@ using AuctionService.Consumers;
 using AuctionService.Data;
 using AuctionService.DTOs;
 using AuctionService.Entities;
+using AuctionService.Repository;
+using AuctionService.Repository.Interface;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
@@ -11,6 +13,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using System;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +22,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddDbContext<AuctionDbContext>(Opt =>
-{ Opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); });
+{ 
+    Opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddMassTransit(x =>
@@ -51,6 +57,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters.NameClaimType = "username";
     });
 builder.Services.AddAuthorization();
+//Add repositories
+builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
+
 var app = builder.Build();
 app.UseAuthorization();
 
@@ -62,45 +71,43 @@ try
 catch { }
 
 //get all auctions
-app.MapGet("/api/auctions", async (string? date, AuctionDbContext repo, IMapper mapper) =>
+app.MapGet("/api/auctions", AuctionsWithDate);
+ static async Task<IResult>  AuctionsWithDate(string? date, IAuctionRepository auctionRepository)
 {
-    //var auctions = await repo.Auctions.Include(x => x.Item).OrderBy(x => x.Item.Make).ToListAsync();
-    var auctions = repo.Auctions.OrderBy(x => x.Item.Make).AsQueryable();
-    if (!string.IsNullOrEmpty(date))
+    try
     {
-        auctions = auctions.Where(x => x.UpdatedDate.CompareTo(DateTime.Parse(date).ToUniversalTime()) > 0);
-
+        var auctions = await auctionRepository.GetAuctionsAsync(date);
+        return Results.Ok(auctions);
     }
-    var auctionDtos = mapper.Map<List<AuctionDTO>>(auctions);
-    return Results.Ok(
-        await auctions.ProjectTo<AuctionDTO>(mapper.ConfigurationProvider).ToListAsync()
-        );
-});
+    catch (Exception e)
+    {
+        throw new Exception(e.Message);
+    }
+}
 
 //get by id
-app.MapGet("/api/auctions/{id}", async (Guid id, IMapper mapper, AuctionDbContext repo) =>
+app.MapGet("/api/auctions/{id}", async (Guid id, IMapper mapper, AuctionDbContext repo,IAuctionRepository auctionRepository) =>
 {
-    var auction = await repo.Auctions.FindAsync(id);
+    var auction = await auctionRepository.GetAuctionByIdAsync(id);
     if (auction == null)
         return Results.NotFound();
-    var auctionDto = mapper.Map<AuctionDTO>(auction);
 
-    return Results.Ok(auctionDto);
+    return Results.Ok(auction);
 }).WithName("GetAuctionById");
 
 //create auction
 
 app.MapPost("/api/auctions", [Authorize] async (CreateAuctionDTO createAuctionDTO, IMapper mapper, AuctionDbContext repo,
-    IPublishEndpoint publishEndpoint, HttpContext context) =>
+    IPublishEndpoint publishEndpoint, HttpContext context,IAuctionRepository auctionRepository) =>
 {
     var auction = mapper.Map<Auction>(createAuctionDTO);
     auction.Seller =context.User.Identity.Name;
-    await repo.Auctions.AddAsync(auction);
+     auctionRepository.AddAuction(auction);
 
     var createdAuctionDto = mapper.Map<AuctionDTO>(auction);
     await publishEndpoint.Publish(mapper.Map<AuctionCreated>(createdAuctionDto));
 
-    bool result = await repo.SaveChangesAsync() > 0;
+    bool result = await auctionRepository.SaveChangesAsync() ;
     if (!result)
         return Results.BadRequest("Could not create the record.");
 
@@ -109,9 +116,10 @@ app.MapPost("/api/auctions", [Authorize] async (CreateAuctionDTO createAuctionDT
 
 //update
 app.MapPut("/api/auctions/{id}",[Authorize] async (Guid id, UpdateAuctionDTO updateAuction, IMapper mapper,
-    AuctionDbContext repo, IPublishEndpoint publishEndpoint,HttpContext context) =>
+    AuctionDbContext repo, IPublishEndpoint publishEndpoint,HttpContext context
+    ,IAuctionRepository auctionRepository) =>
 {
-    var auction = await repo.Auctions.Include(x => x.Item).FirstOrDefaultAsync(x => x.Id == id);
+    var auction =await auctionRepository.GetAuctionEntityById(id);
     if (auction == null) return Results.NotFound();
 
     if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
@@ -123,7 +131,7 @@ app.MapPut("/api/auctions/{id}",[Authorize] async (Guid id, UpdateAuctionDTO upd
     
     await publishEndpoint.Publish(mapper.Map<AuctionUpdated>(auction));
 
-    var result = await repo.SaveChangesAsync() > 0;
+    var result = await auctionRepository.SaveChangesAsync() ;
     if (!result) return Results.BadRequest();
     //var updatedAuction = mapper.Map<AuctionUpdated>(updateAuction);
     
@@ -132,15 +140,15 @@ app.MapPut("/api/auctions/{id}",[Authorize] async (Guid id, UpdateAuctionDTO upd
 
 //delete
 app.MapDelete("/api/auctions/{id}", [Authorize] async (Guid id, AuctionDbContext repo,
-    IPublishEndpoint publishEndpoint, HttpContext context) =>
+    IPublishEndpoint publishEndpoint, HttpContext context,IAuctionRepository auctionRepository) =>
 {
-    var auction = await repo.Auctions.FindAsync(id);
+    var auction = await auctionRepository.GetAuctionEntityById(id);
     if (auction != null)
     {
         if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
-        repo.Auctions.Remove(auction);
+        auctionRepository.RemoveAuction(auction);
        await publishEndpoint.Publish(new AuctionDeleted { Id=auction.Id.ToString() });
-        var result = await repo.SaveChangesAsync() > 0;
+        var result = await auctionRepository.SaveChangesAsync();
 
         return Results.Ok();
     }
@@ -148,3 +156,6 @@ app.MapDelete("/api/auctions/{id}", [Authorize] async (Guid id, AuctionDbContext
 });
 
 app.Run();
+
+// Make the implicit Program class public so test projects can access it
+public partial class Program { }

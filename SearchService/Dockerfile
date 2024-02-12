@@ -10,6 +10,7 @@ COPY SearchService/SearchService.csproj SearchService/SearchService.csproj
 COPY GatewayService/GatewayService.csproj GatewayService/GatewayService.csproj
 COPY Contracts/Contracts.csproj Contracts/Contracts.csproj
 COPY IdentityService/IdentityService.csproj IdentityService/IdentityService.csproj
+COPY Tests/AuctionProjectUnitTests/AuctionProjectUnitTests.csproj Tests/AuctionProjectUnitTests/AuctionProjectUnitTests.csproj
 
 # Restore package deps
 RUN dotnet restore AuctionProject.sln
