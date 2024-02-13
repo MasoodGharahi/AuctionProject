@@ -1,23 +1,10 @@
 ﻿using AuctionService.DTOs;
+using AuctionService.Endpoints;
 using AuctionService.Repository.Interface;
-using AuctionService.RequestHelpers;
 using AutoFixture;
-using AutoMapper;
-using MassTransit;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AuctionProjectUnitTests
 {
@@ -41,14 +28,18 @@ namespace AuctionProjectUnitTests
             var client = CreateClient();
 
             // Act
-            var response = await 
+            var response = await AuctionEndpoints.GetByDate(null,_auctionRepo.Object);
 
             // Assert
-            response.EnsureSuccessStatusCode();
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            //Assert.Equal(Results.Ok(), response);
 
-            var actualDtos = await response.Content.ReadFromJsonAsync<List<AuctionDTO>>();
+            Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<AuctionDTO>>>(response); // Ensure successful response
+
+            var actualDtos = ((Microsoft.AspNetCore.Http.HttpResults.Ok<List<AuctionDTO>>)response).Value;
             Assert.Equal(expectedAuctionCount, actualDtos.Count);
+
+            //var actualDtos = await response.Content.ReadFromJsonAsync<List<AuctionDTO>>();
+            //Assert.Equal(expectedAuctionCount, actualDtos.Count);
         }
 
 
