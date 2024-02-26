@@ -2,12 +2,12 @@
 using AuctionService.DTOs;
 using AuctionService.Entities;
 using AuctionService.Repository.Interface;
-using AuctionService.Repository;
 using AutoMapper;
 using Contracts;
-using MassTransit.Transports;
 using MassTransit;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 
 namespace AuctionService.Endpoints
@@ -16,30 +16,32 @@ namespace AuctionService.Endpoints
     {
         public static void MapAuctionEndpoints(this IEndpointRouteBuilder app)
         {
-            app.MapGet("/api/auctions", GetByDate);
-            app.MapGet("/api/auctions/{id}", GetById).WithName("GetAuctionById");
-            app.MapPost("/api/auctions", Create);
-            app.MapPut("/api/auctions/{id}", Update);
-            app.MapDelete("/api/auctions/{id}", Update);
+            var group = app.MapGroup("/api/auctions/");
+            group.MapGet("",()=> GetByDate);
+            group.MapGet("{id}", () => GetById).WithName("GetAuctionById");
+            group.MapPost("", () => Create);
+            group.MapPut("{id}", () => Update);
+            group.MapDelete("{id}", () => Delete);
 
         }
 
 
-        public static async Task<IResult> GetByDate(string? date, IAuctionRepository auctionRepository)
+        //public static async Task<Results<Ok<List<AuctionDTO>>, BadRequest<string>>> GetByDate([FromBody] string? date, IAuctionRepository auctionRepository)
+        public static async Task<IResult> GetByDate( string? date, IAuctionRepository auctionRepository)
         {
             try
             {
                 var auctions = await auctionRepository.GetAuctionsAsync(date);
-                return Results.Ok(auctions);
+                return  Results.Ok(auctions);
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                return  Results.BadRequest(e.Message);
             }
         }
 
         //get by id
-        public static async Task<IResult> GetById(Guid id, IMapper mapper, AuctionDbContext repo, IAuctionRepository auctionRepository)
+        public static async Task<IResult> GetById(Guid id, IAuctionRepository auctionRepository)
         {
             var auction = await auctionRepository.GetAuctionByIdAsync(id);
             if (auction == null)
@@ -49,7 +51,7 @@ namespace AuctionService.Endpoints
         }
 
         //create auction
-        [Authorize]
+        /*[Authorize]*/
         public static async Task<IResult> Create(CreateAuctionDTO createAuctionDTO,
             IMapper mapper, AuctionDbContext repo,
         IPublishEndpoint publishEndpoint, HttpContext context, IAuctionRepository auctionRepository)
@@ -73,7 +75,7 @@ namespace AuctionService.Endpoints
 
 
         //update
-        [Authorize]
+        /*[Authorize]*/
         public static async Task<IResult> Update(Guid id, UpdateAuctionDTO updateAuction,
             IMapper mapper,
     AuctionDbContext repo, IPublishEndpoint publishEndpoint, HttpContext context
@@ -100,8 +102,8 @@ namespace AuctionService.Endpoints
 
 
         //delete
-        [Authorize]
-        public static async Task<IResult> Delete (Guid id, AuctionDbContext repo,
+        /*[Authorize]*/
+        public static async Task<IResult> Delete(Guid id, AuctionDbContext repo,
     IPublishEndpoint publishEndpoint, HttpContext context, IAuctionRepository auctionRepository)
         {
             var auction = await auctionRepository.GetAuctionEntityById(id);

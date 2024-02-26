@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace IdentityService.Pages.Ciba;
 
 [SecurityHeaders]
-[Authorize]
+/*[Authorize]*/
 public class AllModel : PageModel
 {
     public IEnumerable<BackchannelUserLoginRequest> Logins { get; set; }

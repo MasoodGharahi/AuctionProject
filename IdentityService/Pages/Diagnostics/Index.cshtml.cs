@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace IdentityService.Pages.Diagnostics;
 
 [SecurityHeaders]
-[Authorize]
+/*[Authorize]*/
 public class Index : PageModel
 {
     public ViewModel View { get; set; }

@@ -2,6 +2,8 @@
 using AuctionService.Endpoints;
 using AuctionService.Repository.Interface;
 using AutoFixture;
+using MassTransit;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Moq;
@@ -12,10 +14,12 @@ namespace AuctionProjectUnitTests
     {
         private readonly Mock<IAuctionRepository> _auctionRepo;
         private readonly Fixture _fixture;
+        private readonly Mock<IPublishEndpoint> _publishEndpoint;
         public AuctionControllerTests()
         {
             _auctionRepo = new Mock<IAuctionRepository>();
             _fixture = new Fixture();
+            _publishEndpoint = new Mock<IPublishEndpoint>();
         }
         [Fact]
         public async Task AuctionsWithDate_WithNoParams_Returns10Auctions()
@@ -28,63 +32,47 @@ namespace AuctionProjectUnitTests
             var client = CreateClient();
 
             // Act
-            var response = await AuctionEndpoints.GetByDate(null,_auctionRepo.Object);
+            var response = await AuctionEndpoints.GetByDate(null, _auctionRepo.Object);
 
             // Assert
-            //Assert.Equal(Results.Ok(), response);
+            Assert.IsType<Ok<List<AuctionDTO>>>(response); // Ensure successful response
 
-            Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<List<AuctionDTO>>>(response); // Ensure successful response
-
-            var actualDtos = ((Microsoft.AspNetCore.Http.HttpResults.Ok<List<AuctionDTO>>)response).Value;
+            var actualDtos = ((Ok<List<AuctionDTO>>)response).Value;
             Assert.Equal(expectedAuctionCount, actualDtos.Count);
-
-            //var actualDtos = await response.Content.ReadFromJsonAsync<List<AuctionDTO>>();
-            //Assert.Equal(expectedAuctionCount, actualDtos.Count);
         }
 
+        [Fact]
+        public async Task GetById_WithValidGUID_ReturnsAuction()
+        {
+            // Arrange
+            var auction = _fixture.Create<AuctionDTO>();
+            _auctionRepo.Setup(repo => repo.GetAuctionByIdAsync(It.IsAny<Guid>())).ReturnsAsync(auction);
 
-        //    private readonly Mock<IAuctionRepository> _auctionRepo;
-        //    private readonly Mock<IPublishEndpoint> _publishEndPoint;
-        //    private readonly Fixture _fixture;
-        //    //private readonly AuctionController _controller;
-        //    private readonly HttpClient _httpClient;
-        //    private readonly WebApplicationFactory<Program> _factory;
+            //var client = CreateClient();
 
-        //    private readonly IMapper _mapper;
+            // Act
+            var response = await AuctionEndpoints.GetById(auction.Id, _auctionRepo.Object);
 
+            // Assert
+            Assert.IsType<Ok<AuctionDTO>>(response); // Ensure successful response
 
+            var actualAuction = ((Ok<AuctionDTO>)response).Value;
+            Assert.Equal(auction.Make, actualAuction?.Make);
+        }
 
-        //    public AuctionControllerTests(WebApplicationFactory<Program> factory)
-        //    {
-        //        _factory = factory;
-        //        _auctionRepo = new Mock<IAuctionRepository>();
-        //        _publishEndPoint = new Mock<IPublishEndpoint>();
-        //        _fixture = new Fixture();
+        [Fact]
+        public async Task GetById_WithInValidGUID_ReturnsNotFound()
+        {
+            // Arrange
+            _auctionRepo.Setup(repo => repo.GetAuctionByIdAsync(It.IsAny<Guid>())).ReturnsAsync(value:null);
 
-        //        var mockMapper = new MapperConfiguration(x =>
-        //        {
-        //            x.AddMaps(typeof(MappingProfiles).Assembly);
-        //        }
-        //            ).CreateMapper().ConfigurationProvider;
-        //        _mapper = new Mapper(mockMapper);
-        //       _httpClient= _factory.CreateClient();
-        //    }
-        //    [Fact]
-        //    public async Task GetAuctions_WithNoParams_Returns10Auctions()
-        //    {
-        //        // arrange
-        //        var auctions=_fixture.CreateMany<AuctionDTO>(10).ToList();
-        //        _auctionRepo.Setup(x => x.GetAuctionsAsync(null)).ReturnsAsync(auctions);
-        //        // act
-        //        var response = await _httpClient.GetAsync($"/api/auctions/"); // Call the Minimal API endpoint
-        //        //because the return type is json we should convert it
-        //        var actualDtos = await response.Content.ReadFromJsonAsync<List<AuctionDTO>>();
+            //var client = CreateClient();
 
-        //        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        //        Assert.IsType<ActionResult<List<AuctionDTO>>>(actualDtos);
-        //        Assert.Equal(10, actualDtos.Count);
-        //    }
+            // Act
+            var response = await AuctionEndpoints.GetById(Guid.NewGuid(), _auctionRepo.Object);
 
-
+            // Assert
+            Assert.IsType<NotFound>(response); // Ensure not found response
+        }
     }
 }

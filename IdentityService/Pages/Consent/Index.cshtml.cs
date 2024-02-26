@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace IdentityService.Pages.Consent;
 
-[Authorize]
+/*[Authorize]*/
 [SecurityHeadersAttribute]
 public class Index : PageModel
 {

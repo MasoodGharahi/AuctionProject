@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace IdentityService.Pages.Grants;
 
 [SecurityHeaders]
-[Authorize]
+/*[Authorize]*/
 public class Index : PageModel
 {
     private readonly IIdentityServerInteractionService _interaction;

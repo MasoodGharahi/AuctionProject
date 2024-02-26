@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace IdentityService.Pages.Ciba;
 
-[Authorize]
+/*[Authorize]*/
 [SecurityHeadersAttribute]
 public class Consent : PageModel
 {
