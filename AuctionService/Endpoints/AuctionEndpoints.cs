@@ -53,8 +53,8 @@ namespace AuctionService.Endpoints
         //create auction
         /*[Authorize]*/
         public static async Task<IResult> Create(CreateAuctionDTO createAuctionDTO,
-            IMapper mapper, AuctionDbContext repo,
-        IPublishEndpoint publishEndpoint, HttpContext context, IAuctionRepository auctionRepository)
+            IMapper mapper,IPublishEndpoint publishEndpoint, 
+            HttpContext context, IAuctionRepository auctionRepository)
         {
             var auction = mapper.Map<Auction>(createAuctionDTO);
             auction.Seller = context.User.Identity.Name;
