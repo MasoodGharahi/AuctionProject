@@ -11,8 +11,9 @@ namespace AuctionProjectUnitTests.Utils
     {
         public static ClaimsPrincipal GetClaimsPrincipal()
         {
-            var claims = new List<Claim> { new Claim("username","test")};
-            var identity = new ClaimsIdentity(claims, "testing");
+            var claims = new List<Claim> { new Claim("username","Test")};
+            var identity = new ClaimsIdentity(claims, "testing","Test","Test");
+  
             return new ClaimsPrincipal(identity);
         }
     }

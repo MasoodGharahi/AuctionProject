@@ -80,7 +80,7 @@ namespace AuctionProjectUnitTests
         public async Task GetById_WithInValidGUID_ReturnsNotFound()
         {
             // Arrange
-            _auctionRepo.Setup(repo => repo.GetAuctionByIdAsync(It.IsAny<Guid>())).ReturnsAsync(value:null);
+            _auctionRepo.Setup(repo => repo.GetAuctionByIdAsync(It.IsAny<Guid>())).ReturnsAsync(value: null);
 
             //var client = CreateClient();
 
@@ -94,18 +94,83 @@ namespace AuctionProjectUnitTests
         public async Task CreateAuction_WithInValidCreatedAuctionDto_ReturnsCreatedAtAction()
         {
             // Arrange
-            var auction=_fixture.Create<CreateAuctionDTO>();
+            var auction = _fixture.Create<CreateAuctionDTO>();
             _auctionRepo.Setup(repo => repo.AddAuction(It.IsAny<Auction>()));
             _auctionRepo.Setup(repo => repo.SaveChangesAsync()).ReturnsAsync(true);
 
             // Act
-            var result = await AuctionEndpoints.Create(auction,_mapper,_publishEndpoint.Object, _httpContext, _auctionRepo.Object);
+            var result = await AuctionEndpoints.Create(auction, _mapper, _publishEndpoint.Object, _httpContext, _auctionRepo.Object);
             var createdResult = ((CreatedAtRoute<AuctionDTO>)result).Value;
 
             // Assert
             Assert.NotNull(result);
-            //Assert.Equal("GetAuctionById", createdResult);
-            Assert.IsType<CreatedAtRoute<AuctionDTO>>(result); 
+            Assert.IsType<CreatedAtRoute<AuctionDTO>>(result);
+        }
+        [Fact]
+        public async Task CreateAuction_FailedSave_Returns400BadRequest()
+        {
+            // Arrange
+            var auction = _fixture.Create<CreateAuctionDTO>();
+            _auctionRepo.Setup(repo => repo.AddAuction(It.IsAny<Auction>()));
+            _auctionRepo.Setup(repo => repo.SaveChangesAsync()).ReturnsAsync(false);
+
+            // Act
+            var result = await AuctionEndpoints.Create(auction, _mapper, _publishEndpoint.Object, _httpContext, _auctionRepo.Object);
+
+            // Assert
+            Assert.IsType<BadRequest<string>>(result);
+        }
+
+        [Fact]
+        public async Task UpdateAuction_WithUpdateAuctionDto_ReturnsOkResponse()
+        {
+            //arrange
+            var auction = _fixture.Build<Auction>().Without(x => x.Item).Create();
+            auction.Item = _fixture.Build<Item>().Without(x => x.Auction).Create();
+            auction.Seller = "Test";
+            var updateDto = _fixture.Create<UpdateAuctionDTO>();
+
+            _auctionRepo.Setup(repo => repo.GetAuctionEntityById(It.IsAny<Guid>()))
+                .ReturnsAsync(auction);
+            _auctionRepo.Setup(repo => repo.SaveChangesAsync()).ReturnsAsync(true);
+
+            //act
+            var result = await AuctionEndpoints.Update(Guid.NewGuid(), updateDto, _mapper,
+                _publishEndpoint.Object,_httpContext ,_auctionRepo.Object);
+
+            //assert
+            Assert.IsType<Ok>(result);
+
+        }
+
+        [Fact]
+        public async Task UpdateAuction_WithInvalidUser_Returns403Forbid()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task UpdateAuction_WithInvalidGuid_ReturnsNotFound()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task DeleteAuction_WithValidUser_ReturnsOkResponse()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task DeleteAuction_WithInvalidGuid_Returns404Response()
+        {
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task DeleteAuction_WithInvalidUser_Returns403Response()
+        {
+            throw new NotImplementedException();
         }
     }
 }

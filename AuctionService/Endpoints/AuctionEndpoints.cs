@@ -77,14 +77,13 @@ namespace AuctionService.Endpoints
         //update
         /*[Authorize]*/
         public static async Task<IResult> Update(Guid id, UpdateAuctionDTO updateAuction,
-            IMapper mapper,
-    AuctionDbContext repo, IPublishEndpoint publishEndpoint, HttpContext context
+            IMapper mapper, IPublishEndpoint publishEndpoint, HttpContext context
     , IAuctionRepository auctionRepository)
         {
             var auction = await auctionRepository.GetAuctionEntityById(id);
             if (auction == null) return Results.NotFound();
 
-            if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
+            //if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
             auction.Item.Make = updateAuction.Make ?? auction.Item.Make;
             auction.Item.Model = updateAuction.Model ?? auction.Item.Model;
             auction.Item.Color = updateAuction.Color ?? auction.Item.Color;
