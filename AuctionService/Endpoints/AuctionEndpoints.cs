@@ -102,13 +102,13 @@ namespace AuctionService.Endpoints
 
         //delete
         /*[Authorize]*/
-        public static async Task<IResult> Delete(Guid id, AuctionDbContext repo,
+        public static async Task<IResult> Delete(Guid id,
     IPublishEndpoint publishEndpoint, HttpContext context, IAuctionRepository auctionRepository)
         {
             var auction = await auctionRepository.GetAuctionEntityById(id);
             if (auction != null)
             {
-                if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
+                //if (auction.Seller != context.User.Identity.Name) return Results.Forbid();
                 auctionRepository.RemoveAuction(auction);
                 await publishEndpoint.Publish(new AuctionDeleted
                 {

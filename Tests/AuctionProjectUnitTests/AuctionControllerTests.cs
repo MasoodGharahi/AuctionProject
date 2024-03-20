@@ -152,19 +152,54 @@ namespace AuctionProjectUnitTests
         [Fact]
         public async Task UpdateAuction_WithInvalidGuid_ReturnsNotFound()
         {
-            throw new NotImplementedException();
+            //arrange
+            var auction = _fixture.Build<Auction>().Without(x => x.Item).Create();
+            auction.Item = _fixture.Build<Item>().Without(x => x.Auction).Create();
+            auction.Seller = "Test";
+            var updateDto = _fixture.Create<UpdateAuctionDTO>();
+
+            _auctionRepo.Setup(repo => repo.GetAuctionEntityById(It.IsAny<Guid>()))
+                .ReturnsAsync(value:null);
+
+            //act
+            var result = await AuctionEndpoints.Update(Guid.NewGuid(), updateDto, _mapper,
+                _publishEndpoint.Object, _httpContext, _auctionRepo.Object);
+
+            //assert
+            Assert.IsType<NotFound>(result);
         }
 
         [Fact]
         public async Task DeleteAuction_WithValidUser_ReturnsOkResponse()
-        {
-            throw new NotImplementedException();
+        {    
+            //arrange
+            var auction = _fixture.Build<Auction>().Without(x => x.Item).Create();
+            auction.Seller = "Test";
+
+            _auctionRepo.Setup(repo => repo.GetAuctionEntityById(It.IsAny<Guid>()))
+                .ReturnsAsync(auction);
+
+            //act
+            var result = await AuctionEndpoints.Delete(Guid.NewGuid(),
+                _publishEndpoint.Object, _httpContext, _auctionRepo.Object);
+
+            //assert
+            Assert.IsType<Ok>(result);
         }
 
         [Fact]
         public async Task DeleteAuction_WithInvalidGuid_Returns404Response()
         {
-            throw new NotImplementedException();
+            //arrange
+            _auctionRepo.Setup(repo => repo.GetAuctionEntityById(It.IsAny<Guid>()))
+                .ReturnsAsync(value:null);
+
+            //act
+            var result = await AuctionEndpoints.Delete(Guid.NewGuid(),
+                _publishEndpoint.Object, _httpContext, _auctionRepo.Object);
+
+            //assert
+            Assert.IsType<BadRequest>(result);
         }
 
         [Fact]
