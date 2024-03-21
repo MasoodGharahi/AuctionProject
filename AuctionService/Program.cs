@@ -63,7 +63,7 @@ app.UseAuthorization();
 //app.MapAuctionEndpoints();
 
 try
-{
+{  
     DbInitializer.InitDb(app);
 }
 catch (Exception e)
